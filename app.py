@@ -9,6 +9,30 @@ import numpy as np
 from streamlit_option_menu import option_menu
 from scipy.cluster.hierarchy import dendrogram, linkage
 from groq import Groq
+from sklearn.metrics import silhouette_score
+from sklearn.metrics import davies_bouldin_score
+
+
+davies_bouldin = davies_bouldin_score(tfidf_matrix, labels)
+st.write(f"Davies-Bouldin Index: {davies_bouldin:.4f}")
+
+silhouette_avg = silhouette_score(tfidf_matrix, labels)
+st.write(f"Silhouette Score: {silhouette_avg:.4f}")
+
+def precision_at_k(recommended_indices, ground_truth_indices, k=10):
+    relevant = set(recommended_indices[:k]) & set(ground_truth_indices)
+    precision = len(relevant) / k
+    return precision
+
+def calculate_recall_precision(retrieved_results, relevant_results):
+    true_positives = len(set(retrieved_results) & set(relevant_results))
+    precision = true_positives / len(retrieved_results)
+    recall = true_positives / len(relevant_results)
+    return recall, precision
+
+def f1_score(recall, precision):
+    return 2 * (precision * recall) / (precision + recall) if precision + recall else 0
+
 
 # Function to create TF-IDF matrix
 def create_tfidf_matrix(data):
@@ -234,7 +258,15 @@ elif page == "Clustering Analysis":
                 if st.button("Run Clustering"):
                     labels, _ = kmeans_clustering(tfidf_matrix, num_clusters)
                     plot_clusters(tfidf_matrix, labels)
+                # Calculate and display evaluation metrics
+            silhouette_avg = silhouette_score(tfidf_matrix, labels)
+            davies_bouldin = davies_bouldin_score(tfidf_matrix, labels)
+            
+            st.write("### Clustering Evaluation Metrics")
+            st.metric("Silhouette Score", f"{silhouette_avg:.4f}")
+            st.metric("Davies-Bouldin Index", f"{davies_bouldin:.4f}")
 
+            
             elif clustering_algorithm == "Agglomerative":
                 num_clusters = st.number_input("Select number of clusters for Agglomerative Clustering:", min_value=1, max_value=10, value=2)
                 if st.button("Run Agglomerative Clustering"):
@@ -281,7 +313,8 @@ elif page == "Product Similarity":
 
             # Create TF-IDF matrix
             tfidf_matrix, vectorizer = create_tfidf_matrix(data)
-
+           
+            
             query = st.text_area("Enter product description to find similar products:")
 
             if st.button("Find Similar Products"):
